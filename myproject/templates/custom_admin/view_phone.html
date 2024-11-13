@@ -1,0 +1,40 @@
+<!-- templates/custom_admin/view_phone.html -->
+
+{% extends 'base.html' %}
+{% load form_tags %}
+
+{% block content %}
+<h2>View Phone Number Details</h2>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Phone Number: {{ phone.number }}</h5>
+        <p class="card-text"><strong>JWT Token:</strong> {{ phone.token.jwt_token }}</p>
+        <p class="card-text"><strong>Is Verified:</strong> {{ phone.is_verified }}</p>
+        
+        <h5 class="mt-4">Community Members:</h5>
+        {% if community_members %}
+            <ul class="list-group">
+                {% for member in community_members %}
+                    <li class="list-group-item">
+                        <strong>Name:</strong> {{ member.name }}<br>
+                        <strong>Community:</strong> {{ member.get_community_display }}<br>
+                        <strong>Role:</strong> {{ member.get_role_display }}<br>
+                        <strong>Profile Image:</strong> 
+                        {% if member.profile_image %}
+                            <img src="data:image/png;base64,{{ member.profile_image }}" alt="{{ member.name }}" width="100">
+                        {% else %}
+                            No Image
+                        {% endif %}<br>
+                        <a href="{% url 'custom_admin:assign_admin' number=phone.number community_id=member.community %}" class="btn btn-sm btn-primary mt-2">Assign Admin</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No community members associated with this phone number.</p>
+        {% endif %}
+        
+        <a href="{% url 'custom_admin:dashboard' %}" class="btn btn-secondary mt-4">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

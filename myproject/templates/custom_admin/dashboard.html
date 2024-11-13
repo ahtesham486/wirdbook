@@ -1,0 +1,165 @@
+<!-- templates/custom_admin/dashboard.html -->
+
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Phone Numbers</h2>
+
+<!-- Filter Form -->
+<form method="get" class="row g-3 mb-4">
+    <div class="col-md-4">
+        <label for="community" class="form-label">Filter by Community</label>
+        <select name="community" id="community" class="form-select" onchange="this.form.submit()">
+            <option value="all" {% if selected_community == 'all' %}selected{% endif %}>All Communities</option>
+            {% for value, name in communities %}
+                <option value="{{ value }}" {% if selected_community|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Number</th>
+            <th>JWT Token</th>
+            <th>Role</th>
+            <th>Community</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for phone in phone_numbers %}
+        <tr>
+            <td>{{ phone.number }}</td>
+            <td>{{ phone.token.jwt_token }}</td>
+            <td>
+                {% for member in phone.community_members.all %}
+                    {{ member.get_role_display }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                    -
+                {% endfor %}
+            </td>
+            <td>
+                {% for member in phone.community_members.all %}
+                    {{ member.get_community_display }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                    -
+                {% endfor %}
+            </td>
+            <td>
+                <a href="{% url 'custom_admin:view_phone' phone.number %}" class="btn btn-sm btn-info">View</a>
+                <a href="{% url 'custom_admin:edit_phone' phone.number %}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="#" class="btn btn-sm btn-danger delete-btn" data-number="{{ phone.number }}">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">No phone numbers found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Pagination Controls -->
+<nav aria-label="Page navigation">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_community != 'all' %}&community={{ selected_community }}{% endif %}" aria-label="Previous">
+          <span aria-hidden="true">&laquo;</span>
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link" aria-hidden="true">&laquo;</span>
+      </li>
+    {% endif %}
+    
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if selected_community != 'all' %}&community={{ selected_community }}{% endif %}">{{ num }}</a></li>
+      {% endif %}
+    {% endfor %}
+    
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_community != 'all' %}&community={{ selected_community }}{% endif %}" aria-label="Next">
+          <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <span class="page-link" aria-hidden="true">&raquo;</span>
+      </li>
+    {% endif %}
+  </ul>
+</nav>
+
+<!-- Communities Section -->
+<h2 class="mt-5">Communities</h2>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Community Name</th>
+            <th>Number of Members</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for community in community_data %}
+        <tr>
+            <td>{{ community.name }}</td>
+            <td>{{ community.count }}</td>
+            <td>
+                <a href="?community={{ community.id }}" class="btn btn-sm btn-primary">View Members</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" id="deleteForm">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to delete phone number <strong id="phoneNumber"></strong>?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const phoneNumberSpan = document.getElementById('phoneNumber');
+    const deleteForm = document.getElementById('deleteForm');
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const phoneNumber = this.getAttribute('data-number');
+            phoneNumberSpan.textContent = phoneNumber;
+            // Set the form action to the delete URL
+            deleteForm.action = `/custom-admin/delete-phone/${phoneNumber}/`;
+            deleteModal.show();
+        });
+    });
+</script>
+{% endblock %}
